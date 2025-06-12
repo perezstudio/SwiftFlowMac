@@ -10,23 +10,44 @@ import SwiftData
 
 @main
 struct SwiftFlowApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
+	
+	@Environment(\.modelContext) private var modelContext
+	@Environment(\.dismissWindow) private var dismissWindow
+	@State var elementInspector: Bool = false
+	@State private var globalStore = GlobalStore()
+    
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        WindowGroup(id: "project-picker") {
+			StartingView()
+				.environment(globalStore)
+				.onAppear {
+					// This will ensure the view model has access to model context
+					let modelContainer = try? ModelContainer(for: Project.self)
+				}
         }
-        .modelContainer(sharedModelContainer)
+		.windowStyle(.hiddenTitleBar)
+		.defaultPosition(.center)
+		.defaultSize(width: 500, height: 300)
+		
+		Window("Editor", id: "editor") {
+			EditorView()
+				.environment(globalStore)
+				.toolbar {
+					ToolbarItem {
+						Button {
+							print("Toggle Inspector Panel")
+						} label: {
+							Label("Inspector", systemImage: "sidebar.right")
+						}
+					}
+				}
+				.inspector(isPresented: $elementInspector) {
+					Text("Inspector panel")
+				}
+				.onAppear {
+					// This will ensure the view model has access to model context
+					let modelContainer = try? ModelContainer(for: Project.self)
+				}
+		}
     }
 }
