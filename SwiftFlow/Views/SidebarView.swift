@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct SidebarView: View {
 	@Environment(GlobalStore.self) private var globalStore
@@ -80,8 +81,7 @@ struct FileNavigatorView: View {
 					}
 				} label: {
 					Label("Views", systemImage: "doc.text")
-						.font(.caption)
-						.foregroundStyle(.secondary)
+						.font(.body)
 				}
 				
 				// Models Section
@@ -94,8 +94,7 @@ struct FileNavigatorView: View {
 					}
 				} label: {
 					Label("Models", systemImage: "cylinder.split.1x2")
-						.font(.caption)
-						.foregroundStyle(.secondary)
+						.font(.body)
 				}
 			} else {
 				Text("No project selected")
@@ -234,6 +233,8 @@ struct FileStructureView: View {
 struct ViewFileStructure: View {
 	let viewFile: ViewFile
 	@Environment(GlobalStore.self) private var globalStore
+	@Environment(\.modelContext) private var modelContext
+	@State private var isTargeted = false
 	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 12) {
@@ -255,8 +256,7 @@ struct ViewFileStructure: View {
 					}
 				} label: {
 					Label("Variables (\(viewFile.variables.count))", systemImage: "function")
-						.font(.caption)
-						.foregroundStyle(.secondary)
+						.font(.body)
 				}
 			}
 			
@@ -266,13 +266,83 @@ struct ViewFileStructure: View {
 					ForEach(viewFile.components) { component in
 						ComponentStructureRow(component: component, level: 0)
 					}
+					
+					// Root level drop zone
+					HStack {
+						Text("Drop here to add at root level")
+							.font(.body)
+							.foregroundStyle(.secondary)
+						Spacer()
+					}
+					.padding(.leading, 16)
+					.padding(.vertical, 4)
+					.background(
+						RoundedRectangle(cornerRadius: 4)
+							.fill(isTargeted ? Color.accentColor.opacity(0.2) : Color.clear)
+					)
+					.onDrop(of: [.existingComponent], isTargeted: $isTargeted) { providers in
+						handleRootDrop(providers: providers)
+						return true
+					}
 				} label: {
 					Label("Components (\(viewFile.components.count))", systemImage: "square.stack.3d.up")
-						.font(.caption)
-						.foregroundStyle(.secondary)
+						.font(.body)
 				}
 			}
 		}
+	}
+	
+	private func handleRootDrop(providers: [NSItemProvider]) {
+		for provider in providers {
+			provider.loadTransferable(type: ExistingComponentTransferable.self) { result in
+				switch result {
+				case .success(let transferable):
+					DispatchQueue.main.async {
+						moveExistingComponentToRoot(componentId: transferable.componentId)
+					}
+				case .failure(let error):
+					print("Failed to load existing component: \(error)")
+				}
+			}
+		}
+	}
+	
+	private func moveExistingComponentToRoot(componentId: UUID) {
+		if let movedComponent = findAndRemoveComponent(componentId: componentId, in: viewFile) {
+			viewFile.components.append(movedComponent)
+			globalStore.selectedComponent = movedComponent
+			try? modelContext.save()
+		}
+	}
+	
+	private func findAndRemoveComponent(componentId: UUID, in viewFile: ViewFile) -> Component? {
+		// Check root components
+		if let index = viewFile.components.firstIndex(where: { $0.id == componentId }) {
+			return viewFile.components.remove(at: index)
+		}
+		
+		// Check nested components
+		for component in viewFile.components {
+			if let found = findAndRemoveComponentRecursively(componentId: componentId, in: component) {
+				return found
+			}
+		}
+		
+		return nil
+	}
+	
+	private func findAndRemoveComponentRecursively(componentId: UUID, in parentComponent: Component) -> Component? {
+		if let index = parentComponent.children.firstIndex(where: { $0.id == componentId }) {
+			return parentComponent.children.remove(at: index)
+		}
+		
+		for child in parentComponent.children {
+			if let found = findAndRemoveComponentRecursively(componentId: componentId, in: child) {
+				return found
+			}
+		}
+		
+		return nil
 	}
 }
 
@@ -299,8 +369,7 @@ struct ModelFileStructure: View {
 					}
 				} label: {
 					Label("Fields (\(modelFile.fields.count))", systemImage: "list.bullet")
-						.font(.caption)
-						.foregroundStyle(.secondary)
+						.font(.body)
 				}
 			}
 		}
@@ -313,22 +382,18 @@ struct VariableStructureRow: View {
 	var body: some View {
 		HStack {
 			Image(systemName: "chevron.right")
-				.font(.caption2)
-				.foregroundStyle(.tertiary)
+				.font(.body)
 			
 			Text(kindPrefix)
-				.font(.caption)
-				.foregroundStyle(.purple)
+				.font(.body)
 			
 			Text(variable.name)
-				.font(.caption)
+				.font(.body)
 			
 			Text(":")
-				.foregroundStyle(.secondary)
 			
 			Text(variable.type)
-				.font(.caption)
-				.foregroundStyle(.blue)
+				.font(.body)
 			
 			Spacer()
 		}
@@ -351,44 +416,61 @@ struct ComponentStructureRow: View {
 	let component: Component
 	let level: Int
 	@Environment(GlobalStore.self) private var globalStore
+	@Environment(\.modelContext) private var modelContext
 	@State private var isExpanded = true
+	@State private var isTargeted = false
 	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 4) {
 			HStack {
 				if !component.children.isEmpty {
 					Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-						.font(.caption2)
-						.foregroundStyle(.tertiary)
+						.font(.body)
 						.onTapGesture {
 							isExpanded.toggle()
 						}
 				} else {
 					Image(systemName: "chevron.right")
-						.font(.caption2)
-						.foregroundStyle(.tertiary)
+						.font(.body)
 						.opacity(0.3)
 				}
 				
 				Image(systemName: componentIcon)
-					.font(.caption)
-					.foregroundStyle(.blue)
+					.font(.body)
 				
 				Text(componentName)
-					.font(.caption)
+					.font(.body)
 				
 				Spacer()
 				
 				if globalStore.selectedComponent == component {
 					Image(systemName: "checkmark.circle.fill")
-						.font(.caption)
-						.foregroundStyle(.green)
+						.font(.body)
 				}
 			}
 			.padding(.leading, CGFloat(level * 16))
+			.background(
+				RoundedRectangle(cornerRadius: 4)
+					.fill(isTargeted ? Color.accentColor.opacity(0.2) : Color.clear)
+			)
 			.contentShape(Rectangle())
 			.onTapGesture {
 				globalStore.selectedComponent = component
+			}
+			.draggable(ExistingComponentTransferable(component: component)) {
+				HStack {
+					Image(systemName: componentIcon)
+						.font(.caption)
+					Text(componentName)
+						.font(.caption)
+				}
+				.padding(4)
+				.background(Color.accentColor.opacity(0.2))
+				.cornerRadius(4)
+			}
+			.onDrop(of: [.existingComponent], isTargeted: $isTargeted) { providers in
+				handleDrop(providers: providers)
+				return true
 			}
 			
 			if isExpanded && !component.children.isEmpty {
@@ -397,6 +479,118 @@ struct ComponentStructureRow: View {
 				}
 			}
 		}
+	}
+	
+	private func handleDrop(providers: [NSItemProvider]) {
+		for provider in providers {
+			provider.loadTransferable(type: ExistingComponentTransferable.self) { result in
+				switch result {
+				case .success(let transferable):
+					DispatchQueue.main.async {
+						guard let viewFile = globalStore.selectedViewFile else { return }
+						moveExistingComponent(componentId: transferable.componentId, to: viewFile, targetComponent: component)
+					}
+				case .failure(let error):
+					print("Failed to load existing component: \(error)")
+				}
+			}
+		}
+	}
+	
+	private func moveExistingComponent(componentId: UUID, to viewFile: ViewFile, targetComponent: Component) {
+		// Prevent dropping component onto itself or its own children
+		if componentId == targetComponent.id || isChildOf(componentId: componentId, in: targetComponent) {
+			return
+		}
+		
+		// Find and remove the component from its current location
+		if let movedComponent = findAndRemoveComponent(componentId: componentId, in: viewFile) {
+			// Add to target component if it's a container, otherwise add as sibling
+			if targetComponent.type == .vstack || targetComponent.type == .hstack || targetComponent.type == .zstack {
+				targetComponent.children.append(movedComponent)
+			} else {
+				// Add as sibling - find parent and add after target
+				if let parent = findParent(of: targetComponent, in: viewFile) {
+					if let index = parent.children.firstIndex(where: { $0.id == targetComponent.id }) {
+						parent.children.insert(movedComponent, at: index + 1)
+					}
+				} else {
+					// Target is at root level
+					if let index = viewFile.components.firstIndex(where: { $0.id == targetComponent.id }) {
+						viewFile.components.insert(movedComponent, at: index + 1)
+					}
+				}
+			}
+			
+			globalStore.selectedComponent = movedComponent
+			try? modelContext.save()
+		}
+	}
+	
+	private func isChildOf(componentId: UUID, in parentComponent: Component) -> Bool {
+		for child in parentComponent.children {
+			if child.id == componentId {
+				return true
+			}
+			if isChildOf(componentId: componentId, in: child) {
+				return true
+			}
+		}
+		return false
+	}
+	
+	private func findParent(of targetComponent: Component, in viewFile: ViewFile) -> Component? {
+		for component in viewFile.components {
+			if component.children.contains(where: { $0.id == targetComponent.id }) {
+				return component
+			}
+			if let parent = findParentRecursively(of: targetComponent, in: component) {
+				return parent
+			}
+		}
+		return nil
+	}
+	
+	private func findParentRecursively(of targetComponent: Component, in parentComponent: Component) -> Component? {
+		for child in parentComponent.children {
+			if child.children.contains(where: { $0.id == targetComponent.id }) {
+				return child
+			}
+			if let parent = findParentRecursively(of: targetComponent, in: child) {
+				return parent
+			}
+		}
+		return nil
+	}
+	
+	private func findAndRemoveComponent(componentId: UUID, in viewFile: ViewFile) -> Component? {
+		// Check root components
+		if let index = viewFile.components.firstIndex(where: { $0.id == componentId }) {
+			return viewFile.components.remove(at: index)
+		}
+		
+		// Check nested components
+		for component in viewFile.components {
+			if let found = findAndRemoveComponentRecursively(componentId: componentId, in: component) {
+				return found
+			}
+		}
+		
+		return nil
+	}
+	
+	private func findAndRemoveComponentRecursively(componentId: UUID, in parentComponent: Component) -> Component? {
+		if let index = parentComponent.children.firstIndex(where: { $0.id == componentId }) {
+			return parentComponent.children.remove(at: index)
+		}
+		
+		for child in parentComponent.children {
+			if let found = findAndRemoveComponentRecursively(componentId: componentId, in: child) {
+				return found
+			}
+		}
+		
+		return nil
 	}
 	
 	private var componentName: String {
@@ -417,8 +611,8 @@ struct ComponentStructureRow: View {
 		switch component.type {
 		case .text: return "textformat"
 		case .image: return "photo"
-		case .vstack: return "rectangle.split.3x1"
-		case .hstack: return "rectangle.split.1x2"
+		case .vstack: return "rectangle.split.1x3"
+		case .hstack: return "rectangle.split.3x1"
 		case .zstack: return "square.stack.3d.up"
 		case .spacer: return "arrow.left.and.right"
 		case .button: return "button.programmable"
@@ -434,23 +628,19 @@ struct FieldStructureRow: View {
 	var body: some View {
 		HStack {
 			Image(systemName: "chevron.right")
-				.font(.caption2)
-				.foregroundStyle(.tertiary)
+				.font(.body)
 			
 			Text(field.name)
-				.font(.caption)
+				.font(.body)
 			
 			Text(":")
-				.foregroundStyle(.secondary)
 			
 			Text(field.type)
-				.font(.caption)
-				.foregroundStyle(.purple)
+				.font(.body)
 			
 			if let defaultValue = field.defaultValue {
 				Text("= \(defaultValue)")
-					.font(.caption)
-					.foregroundStyle(.secondary)
+					.font(.body)
 			}
 			
 			Spacer()

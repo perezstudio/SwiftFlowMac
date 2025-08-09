@@ -33,6 +33,16 @@
 			<key>UTTypeIdentifier</key>
 			<string>com.swiftflow.component</string>
 		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>SwiftFlow Existing Component</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.swiftflow.existingcomponent</string>
+		</dict>
 	</array>
 </dict>
 </plist>

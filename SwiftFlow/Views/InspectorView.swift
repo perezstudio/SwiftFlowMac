@@ -14,37 +14,30 @@ struct InspectorView: View {
 	
 	var body: some View {
 		ScrollView {
-			VStack(alignment: .leading, spacing: 20) {
-				if let component = globalStore.selectedComponent {
-					ComponentInspector(component: component)
-				} else if let viewFile = globalStore.selectedViewFile {
-					ViewFileInspector(viewFile: viewFile)
-				} else if let modelFile = globalStore.selectedModelFile {
-					ModelFileInspector(modelFile: modelFile)
-				} else {
-					VStack(spacing: 20) {
-						Image(systemName: "slider.horizontal.3")
-							.font(.system(size: 48))
-							.foregroundStyle(.tertiary)
-						
-						VStack(spacing: 8) {
-							Text("No Selection")
-								.font(.headline)
-								.foregroundStyle(.primary)
-							Text("Select a component, file, or element to view and edit its properties")
-								.font(.caption)
-								.foregroundStyle(.secondary)
-								.multilineTextAlignment(.center)
-						}
-					}
-					.frame(maxWidth: .infinity, maxHeight: .infinity)
-					.padding(.top, 60)
+			if let component = globalStore.selectedComponent {
+				ComponentInspector(component: component)
+			} else if let viewFile = globalStore.selectedViewFile {
+				ViewFileInspector(viewFile: viewFile)
+			} else if let modelFile = globalStore.selectedModelFile {
+				ModelFileInspector(modelFile: modelFile)
+			} else {
+				VStack(spacing: 20) {
+					Image(systemName: "sidebar.right")
+						.font(.system(size: 48))
+						.foregroundStyle(.tertiary)
+					
+					Text("No Selection")
+						.font(.headline)
+						.foregroundStyle(.secondary)
+					
+					Text("Select a component or file to view its properties")
+						.font(.body)
+						.foregroundStyle(.tertiary)
+						.multilineTextAlignment(.center)
 				}
+				.padding(.top, 60)
 			}
-			.padding()
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity)
-		.navigationTitle("Inspector")
 	}
 }
 
@@ -75,8 +68,8 @@ struct ComponentInspector: View {
 		switch component.type {
 		case .text: return "textformat"
 		case .image: return "photo"
-		case .vstack: return "rectangle.split.3x1"
-		case .hstack: return "rectangle.split.1x2"
+		case .vstack: return "rectangle.split.1x3"
+		case .hstack: return "rectangle.split.3x1"
 		case .zstack: return "square.stack.3d.up"
 		case .spacer: return "arrow.left.and.right"
 		case .button: return "button.programmable"
@@ -86,56 +79,38 @@ struct ComponentInspector: View {
 	}
 	
 	var body: some View {
-		VStack(alignment: .leading, spacing: 16) {
+		VStack(spacing: 16) {
+			// Header with selected element info
 			HStack {
 				Image(systemName: componentIcon)
-					.font(.title2)
-					.foregroundStyle(.blue)
+					.font(.title)
+					.foregroundColor(.blue)
 				
 				Text(componentTitle)
-					.font(.title3)
-					.bold()
+					.font(.title2)
+					.fontWeight(.bold)
+					.foregroundColor(.primary)
 				
 				Spacer()
 			}
-			
-			Divider()
-			
-			PropertiesSection(
-				component: component,
-				showingAddProperty: $showingAddProperty,
-				propertyKey: $propertyKey,
-				propertyValue: $propertyValue
+			.padding(.horizontal, 16)
+			.padding(.vertical, 12)
+			.background(
+				RoundedRectangle(cornerRadius: 12)
+					.fill(.regularMaterial)
 			)
+			.padding(.horizontal, 16)
 			
-			Divider()
-			
-			ModifiersSection(
-				component: component,
-				showingAddModifier: $showingAddModifier,
-				modifierName: $modifierName
-			)
-			
-			if component.type == .vstack || component.type == .hstack || component.type == .zstack {
-				Divider()
-				ChildrenSection(component: component)
-			}
-		}
-	}
-}
-
-struct PropertiesSection: View {
-	let component: Component
-	@Binding var showingAddProperty: Bool
-	@Binding var propertyKey: String
-	@Binding var propertyValue: String
-	@Environment(\.modelContext) private var modelContext
-	
-	var body: some View {
-		VStack(alignment: .leading, spacing: 12) {
+			// Properties Section Header
 			HStack {
-				Label("Properties", systemImage: "slider.horizontal.3")
+				Image(systemName: "slider.horizontal.3")
+					.font(.body)
+					.foregroundColor(.blue)
+				
+				Text("Properties")
 					.font(.headline)
+					.fontWeight(.semibold)
+					.foregroundColor(.primary)
 				
 				Spacer()
 				
@@ -143,20 +118,116 @@ struct PropertiesSection: View {
 					showingAddProperty = true
 				} label: {
 					Image(systemName: "plus.circle")
+						.foregroundColor(.blue)
 				}
 				.buttonStyle(.plain)
 			}
+			.padding(.horizontal, 16)
 			
+			// Properties Items
 			if component.properties.isEmpty {
 				Text("No properties")
-					.font(.caption)
 					.foregroundStyle(.secondary)
+					.padding(.horizontal, 16)
 			} else {
-				ForEach(component.properties) { property in
-					PropertyRow(property: property, component: component)
+				VStack(spacing: 8) {
+					ForEach(component.properties) { property in
+						PropertyRow(property: property, component: component)
+							.padding(.horizontal, 16)
+							.padding(.vertical, 12)
+							.background(
+								RoundedRectangle(cornerRadius: 12)
+									.fill(.regularMaterial)
+							)
+					}
+				}
+				.padding(.horizontal, 16)
+			}
+			
+			// Modifiers Section Header
+			HStack {
+				Image(systemName: "paintbrush")
+					.font(.body)
+					.foregroundColor(.blue)
+				
+				Text("Modifiers")
+					.font(.headline)
+					.fontWeight(.semibold)
+					.foregroundColor(.primary)
+				
+				Spacer()
+				
+				Button {
+					showingAddModifier = true
+				} label: {
+					Image(systemName: "plus.circle")
+						.foregroundColor(.blue)
+				}
+				.buttonStyle(.plain)
+			}
+			.padding(.horizontal, 16)
+			
+			// Modifiers Items
+			if component.modifiers.isEmpty {
+				Text("No modifiers")
+					.foregroundStyle(.secondary)
+					.padding(.horizontal, 16)
+			} else {
+				VStack(spacing: 8) {
+					ForEach(component.modifiers) { modifier in
+						ModifierRow(modifier: modifier, component: component)
+							.padding(.horizontal, 16)
+							.padding(.vertical, 12)
+							.background(
+								RoundedRectangle(cornerRadius: 12)
+									.fill(.regularMaterial)
+							)
+					}
+				}
+				.padding(.horizontal, 16)
+			}
+			
+			// Children Section (for containers)
+			if component.type == .vstack || component.type == .hstack || component.type == .zstack {
+				// Children Section Header
+				HStack {
+					Image(systemName: "square.stack.3d.down.right")
+						.font(.body)
+						.foregroundColor(.blue)
+					
+					Text("Children")
+						.font(.headline)
+						.fontWeight(.semibold)
+						.foregroundColor(.primary)
+					
+					Spacer()
+				}
+				.padding(.horizontal, 16)
+				
+				// Children Items
+				if component.children.isEmpty {
+					Text("Drop components here")
+						.foregroundStyle(.secondary)
+						.padding(.horizontal, 16)
+				} else {
+					VStack(spacing: 8) {
+						ForEach(component.children) { child in
+							ChildRow(child: child)
+								.padding(.horizontal, 16)
+								.padding(.vertical, 12)
+								.background(
+									RoundedRectangle(cornerRadius: 12)
+										.fill(.regularMaterial)
+								)
+						}
+					}
+					.padding(.horizontal, 16)
 				}
 			}
+			
+			Spacer(minLength: 20)
 		}
+		.padding(.top, 16)
 		.sheet(isPresented: $showingAddProperty) {
 			AddPropertySheet(
 				propertyKey: $propertyKey,
@@ -171,8 +242,27 @@ struct PropertiesSection: View {
 				showingAddProperty = false
 			}
 		}
+		.sheet(isPresented: $showingAddModifier) {
+			AddModifierSheet(
+				modifierName: $modifierName,
+				availableModifiers: [
+					"padding", "frame", "background", "foregroundColor",
+					"font", "cornerRadius", "shadow", "opacity",
+					"scaleEffect", "rotationEffect", "offset", "clipShape"
+				]
+			) { name, arguments in
+				let modifier = Modifier(name: name)
+				modifier.arguments = arguments
+				component.modifiers.append(modifier)
+				try? modelContext.save()
+				
+				modifierName = ""
+				showingAddModifier = false
+			}
+		}
 	}
 }
+
 
 struct PropertyRow: View {
 	let property: ComponentProperty
@@ -184,13 +274,10 @@ struct PropertyRow: View {
 	var body: some View {
 		HStack {
 			Text(property.key)
-				.font(.system(.body, design: .monospaced))
 				.frame(width: 80, alignment: .leading)
 			
 			if isEditing {
 				TextField("Value", text: $editedValue)
-					.textFieldStyle(.roundedBorder)
-					.font(.system(.body, design: .monospaced))
 					.onSubmit {
 						property.value = editedValue
 						try? modelContext.save()
@@ -198,8 +285,6 @@ struct PropertyRow: View {
 					}
 			} else {
 				Text(property.value)
-					.font(.system(.body, design: .monospaced))
-					.foregroundStyle(.blue)
 					.frame(maxWidth: .infinity, alignment: .leading)
 					.contentShape(Rectangle())
 					.onTapGesture {
@@ -216,68 +301,12 @@ struct PropertyRow: View {
 				}
 			} label: {
 				Image(systemName: "trash")
-					.foregroundStyle(.red)
 			}
 			.buttonStyle(.plain)
 		}
-		.padding(.vertical, 2)
 	}
 }
 
-struct ModifiersSection: View {
-	let component: Component
-	@Binding var showingAddModifier: Bool
-	@Binding var modifierName: String
-	@Environment(\.modelContext) private var modelContext
-	
-	let commonModifiers = [
-		"padding", "frame", "background", "foregroundColor",
-		"font", "cornerRadius", "shadow", "opacity",
-		"scaleEffect", "rotationEffect", "offset", "clipShape"
-	]
-	
-	var body: some View {
-		VStack(alignment: .leading, spacing: 12) {
-			HStack {
-				Label("Modifiers", systemImage: "paintbrush")
-					.font(.headline)
-				
-				Spacer()
-				
-				Button {
-					showingAddModifier = true
-				} label: {
-					Image(systemName: "plus.circle")
-				}
-				.buttonStyle(.plain)
-			}
-			
-			if component.modifiers.isEmpty {
-				Text("No modifiers")
-					.font(.caption)
-					.foregroundStyle(.secondary)
-			} else {
-				ForEach(component.modifiers) { modifier in
-					ModifierRow(modifier: modifier, component: component)
-				}
-			}
-		}
-		.sheet(isPresented: $showingAddModifier) {
-			AddModifierSheet(
-				modifierName: $modifierName,
-				availableModifiers: commonModifiers
-			) { name, arguments in
-				let modifier = Modifier(name: name)
-				modifier.arguments = arguments
-				component.modifiers.append(modifier)
-				try? modelContext.save()
-				
-				modifierName = ""
-				showingAddModifier = false
-			}
-		}
-	}
-}
 
 struct ModifierRow: View {
 	let modifier: Modifier
@@ -285,76 +314,46 @@ struct ModifierRow: View {
 	@Environment(\.modelContext) private var modelContext
 	
 	var body: some View {
-		VStack(alignment: .leading, spacing: 4) {
-			HStack {
-				Text(".\(modifier.name)")
-					.font(.system(.body, design: .monospaced))
-					.foregroundStyle(.purple)
+		HStack {
+			Text(".\(modifier.name)")
+			
+			if !modifier.arguments.isEmpty {
+				Text("(")
+					.foregroundStyle(.secondary)
 				
-				if !modifier.arguments.isEmpty {
-					Text("(")
-						.foregroundStyle(.secondary)
-					
-					ForEach(Array(modifier.arguments.enumerated()), id: \.offset) { index, arg in
-						if let name = arg.name {
-							Text("\(name):")
-								.font(.system(.caption, design: .monospaced))
-								.foregroundStyle(.secondary)
-						}
-						Text(arg.value)
-							.font(.system(.caption, design: .monospaced))
-							.foregroundStyle(.blue)
-						
-						if index < modifier.arguments.count - 1 {
-							Text(",")
-								.foregroundStyle(.secondary)
-						}
+				ForEach(Array(modifier.arguments.enumerated()), id: \.offset) { index, arg in
+					if let name = arg.name {
+						Text("\(name):")
+							.foregroundStyle(.secondary)
 					}
+					Text(arg.value)
 					
-					Text(")")
-						.foregroundStyle(.secondary)
+					if index < modifier.arguments.count - 1 {
+						Text(",")
+							.foregroundStyle(.secondary)
+					}
 				}
 				
-				Spacer()
-				
-				Button {
-					if let index = component.modifiers.firstIndex(where: { $0.id == modifier.id }) {
-						component.modifiers.remove(at: index)
-						modelContext.delete(modifier)
-						try? modelContext.save()
-					}
-				} label: {
-					Image(systemName: "trash")
-						.foregroundStyle(.red)
-				}
-				.buttonStyle(.plain)
+				Text(")")
+					.foregroundStyle(.secondary)
 			}
+			
+			Spacer()
+			
+			Button {
+				if let index = component.modifiers.firstIndex(where: { $0.id == modifier.id }) {
+					component.modifiers.remove(at: index)
+					modelContext.delete(modifier)
+					try? modelContext.save()
+				}
+			} label: {
+				Image(systemName: "trash")
+			}
+			.buttonStyle(.plain)
 		}
-		.padding(.vertical, 2)
 	}
 }
 
-struct ChildrenSection: View {
-	let component: Component
-	@Environment(GlobalStore.self) private var globalStore
-	
-	var body: some View {
-		VStack(alignment: .leading, spacing: 12) {
-			Label("Children", systemImage: "square.stack.3d.down.right")
-				.font(.headline)
-			
-			if component.children.isEmpty {
-				Text("Drop components here")
-					.font(.caption)
-					.foregroundStyle(.secondary)
-			} else {
-				ForEach(component.children) { child in
-					ChildRow(child: child)
-				}
-			}
-		}
-	}
-}
 
 struct ChildRow: View {
 	let child: Component
@@ -364,8 +363,8 @@ struct ChildRow: View {
 		switch child.type {
 		case .text: return "textformat"
 		case .image: return "photo"
-		case .vstack: return "rectangle.split.3x1"
-		case .hstack: return "rectangle.split.1x2"
+		case .vstack: return "rectangle.split.1x3"
+		case .hstack: return "rectangle.split.3x1"
 		case .zstack: return "square.stack.3d.up"
 		case .spacer: return "arrow.left.and.right"
 		case .button: return "button.programmable"
@@ -377,19 +376,15 @@ struct ChildRow: View {
 	var body: some View {
 		HStack {
 			Image(systemName: childIcon)
-				.foregroundStyle(.blue)
 			
 			Text(String(describing: child.type).capitalized)
-				.font(.body)
 			
 			Spacer()
 			
 			if globalStore.selectedComponent == child {
 				Image(systemName: "checkmark.circle.fill")
-					.foregroundStyle(.green)
 			}
 		}
-		.padding(.vertical, 2)
 		.contentShape(Rectangle())
 		.onTapGesture {
 			globalStore.selectedComponent = child
@@ -406,58 +401,101 @@ struct ViewFileInspector: View {
 	@State private var variableKind: VariableKind = .state
 	
 	var body: some View {
-		VStack(alignment: .leading, spacing: 16) {
+		VStack(spacing: 16) {
+			// Header with selected file info
 			HStack {
 				Image(systemName: "doc.text")
-					.font(.title2)
-					.foregroundStyle(.blue)
+					.font(.title)
+					.foregroundColor(.blue)
 				
 				Text(viewFile.name)
-					.font(.title3)
-					.bold()
+					.font(.title2)
+					.fontWeight(.bold)
+					.foregroundColor(.primary)
 				
 				Spacer()
 			}
+			.padding(.horizontal, 16)
+			.padding(.vertical, 12)
+			.background(
+				RoundedRectangle(cornerRadius: 12)
+					.fill(.regularMaterial)
+			)
+			.padding(.horizontal, 16)
 			
-			Divider()
-			
-			VStack(alignment: .leading, spacing: 12) {
-				HStack {
-					Label("Variables", systemImage: "function")
-						.font(.headline)
-					
-					Spacer()
-					
-					Button {
-						showingAddVariable = true
-					} label: {
-						Image(systemName: "plus.circle")
-					}
-					.buttonStyle(.plain)
-				}
+			// File Info Section Header
+			HStack {
+				Image(systemName: "doc.text.fill")
+					.font(.body)
+					.foregroundColor(.blue)
 				
-				if viewFile.variables.isEmpty {
-					Text("No variables")
-						.font(.caption)
-						.foregroundStyle(.secondary)
-				} else {
+				Text("File Info")
+					.font(.headline)
+					.fontWeight(.semibold)
+					.foregroundColor(.primary)
+				
+				Spacer()
+			}
+			.padding(.horizontal, 16)
+			
+			// File Info Item
+			Text("\(viewFile.components.count) components")
+				.foregroundStyle(.secondary)
+				.padding(.horizontal, 16)
+				.padding(.vertical, 12)
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.background(
+					RoundedRectangle(cornerRadius: 12)
+						.fill(.regularMaterial)
+				)
+				.padding(.horizontal, 16)
+			
+			// Variables Section Header
+			HStack {
+				Image(systemName: "function")
+					.font(.body)
+					.foregroundColor(.blue)
+				
+				Text("Variables")
+					.font(.headline)
+					.fontWeight(.semibold)
+					.foregroundColor(.primary)
+				
+				Spacer()
+				
+				Button {
+					showingAddVariable = true
+				} label: {
+					Image(systemName: "plus.circle")
+						.foregroundColor(.blue)
+				}
+				.buttonStyle(.plain)
+			}
+			.padding(.horizontal, 16)
+			
+			// Variables Items
+			if viewFile.variables.isEmpty {
+				Text("No variables")
+					.foregroundStyle(.secondary)
+					.padding(.horizontal, 16)
+			} else {
+				VStack(spacing: 8) {
 					ForEach(viewFile.variables) { variable in
 						VariableRow(variable: variable, viewFile: viewFile)
+							.padding(.horizontal, 16)
+							.padding(.vertical, 12)
+							.background(
+								RoundedRectangle(cornerRadius: 12)
+									.fill(.regularMaterial)
+							)
 					}
 				}
+				.padding(.horizontal, 16)
 			}
 			
-			Divider()
-			
-			VStack(alignment: .leading, spacing: 8) {
-				Label("Components", systemImage: "square.stack.3d.up")
-					.font(.headline)
-				
-				Text("\(viewFile.components.count) components")
-					.font(.caption)
-					.foregroundStyle(.secondary)
-			}
+			Spacer(minLength: 20)
 		}
+		.padding(.top, 16)
 		.sheet(isPresented: $showingAddVariable) {
 			AddVariableSheet(
 				variableName: $variableName,
@@ -545,41 +583,64 @@ struct ModelFileInspector: View {
 	let modelFile: ModelFile
 	
 	var body: some View {
-		VStack(alignment: .leading, spacing: 16) {
+		VStack(spacing: 16) {
+			// Header with selected model info
 			HStack {
 				Image(systemName: "cylinder.split.1x2")
-					.font(.title2)
-					.foregroundStyle(.green)
+					.font(.title)
+					.foregroundColor(.blue)
 				
 				Text(modelFile.name)
-					.font(.title3)
-					.bold()
+					.font(.title2)
+					.fontWeight(.bold)
+					.foregroundColor(.primary)
 				
 				Spacer()
 			}
+			.padding(.horizontal, 16)
+			.padding(.vertical, 12)
+			.background(
+				RoundedRectangle(cornerRadius: 12)
+					.fill(.regularMaterial)
+			)
+			.padding(.horizontal, 16)
 			
-			Divider()
-			
-			VStack(alignment: .leading, spacing: 8) {
-				Label("Fields", systemImage: "list.bullet")
-					.font(.headline)
+			// Model Info Section Header
+			HStack {
+				Image(systemName: "info.circle")
+					.font(.body)
+					.foregroundColor(.blue)
 				
-				Text("\(modelFile.fields.count) fields")
-					.font(.caption)
-					.foregroundStyle(.secondary)
-			}
-			
-			Divider()
-			
-			VStack(alignment: .leading, spacing: 8) {
-				Label("Model Type", systemImage: "doc.text.fill")
+				Text("Model Info")
 					.font(.headline)
+					.fontWeight(.semibold)
+					.foregroundColor(.primary)
 				
-				Text("SwiftData @Model")
-					.font(.caption)
-					.foregroundStyle(.secondary)
+				Spacer()
 			}
+			.padding(.horizontal, 16)
+			
+			// Model Info Items
+			VStack(spacing: 8) {
+				VStack(alignment: .leading, spacing: 4) {
+					Text("\(modelFile.fields.count) fields")
+						.foregroundStyle(.secondary)
+					Text("SwiftData @Model")
+						.foregroundStyle(.secondary)
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal, 16)
+				.padding(.vertical, 12)
+				.background(
+					RoundedRectangle(cornerRadius: 12)
+						.fill(.regularMaterial)
+				)
+			}
+			.padding(.horizontal, 16)
+			
+			Spacer(minLength: 20)
 		}
+		.padding(.top, 16)
 	}
 }
 

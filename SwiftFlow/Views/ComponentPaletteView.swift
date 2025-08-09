@@ -63,8 +63,8 @@ struct ComponentTileView: View {
 		switch componentType {
 		case .text: return "textformat"
 		case .image: return "photo"
-		case .vstack: return "rectangle.split.3x1"
-		case .hstack: return "rectangle.split.1x2"
+		case .vstack: return "rectangle.split.1x3"
+		case .hstack: return "rectangle.split.3x1"
 		case .zstack: return "square.stack.3d.up"
 		case .spacer: return "arrow.left.and.right"
 		case .button: return "button.programmable"
@@ -128,9 +128,25 @@ struct ComponentTransferable: Transferable, Codable {
 	}
 }
 
+struct ExistingComponentTransferable: Transferable, Codable {
+	let componentId: UUID
+	
+	init(component: Component) {
+		self.componentId = component.id
+	}
+	
+	static var transferRepresentation: some TransferRepresentation {
+		CodableRepresentation(contentType: .existingComponent)
+	}
+}
+
 extension UTType {
 	static var component: UTType {
 		UTType(exportedAs: "com.swiftflow.component")
+	}
+	
+	static var existingComponent: UTType {
+		UTType(exportedAs: "com.swiftflow.existingcomponent")
 	}
 }
 
