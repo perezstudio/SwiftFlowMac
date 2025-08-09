@@ -10,11 +10,13 @@ import SwiftData
 
 @Model
 class ViewFile {
-	var name: String                             // e.g. "LoginView"
+	var id: UUID
+	var name: String
 	var components: [Component]
 	var variables: [Variable]
 
 	init(name: String) {
+		self.id = UUID()
 		self.name = name
 		self.components = []
 		self.variables = []
@@ -23,12 +25,14 @@ class ViewFile {
 
 @Model
 class Variable {
-	var name: String                      // e.g. "isLoggedIn"
-	var type: String                      // e.g. "Bool", "String", "User"
-	var kind: VariableKind                // e.g. .state, .binding
-	var defaultValue: String?             // Optional init/default (only used by state/constant)
+	var id: UUID
+	var name: String
+	var type: String
+	var kind: VariableKind
+	var defaultValue: String?
 
 	init(name: String, type: String, kind: VariableKind, defaultValue: String? = nil) {
+		self.id = UUID()
 		self.name = name
 		self.type = type
 		self.kind = kind
@@ -36,7 +40,7 @@ class Variable {
 	}
 }
 
-enum VariableKind: String, Codable {
+enum VariableKind: String, Codable, CaseIterable {
 	case state
 	case binding
 	case constant

@@ -10,10 +10,12 @@ import SwiftData
 
 @Model
 class ModelFile {
+	var id: UUID
 	var name: String
 	var fields: [ModelField]
 
 	init(name: String) {
+		self.id = UUID()
 		self.name = name
 		self.fields = []
 	}
@@ -21,11 +23,13 @@ class ModelFile {
 
 @Model
 class ModelField {
-	var name: String                             // e.g. "firstName"
-	var type: String                             // e.g. "String", "Int", "Date"
-	var defaultValue: String?                    // e.g. "\"John\"", "0", "Date.now"
+	var id: UUID
+	var name: String
+	var type: String
+	var defaultValue: String?
 
 	init(name: String, type: String, defaultValue: String? = nil) {
+		self.id = UUID()
 		self.name = name
 		self.type = type
 		self.defaultValue = defaultValue

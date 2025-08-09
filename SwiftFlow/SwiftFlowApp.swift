@@ -11,43 +11,63 @@ import SwiftData
 @main
 struct SwiftFlowApp: App {
 	
-	@Environment(\.modelContext) private var modelContext
-	@Environment(\.dismissWindow) private var dismissWindow
 	@State var elementInspector: Bool = false
 	@State private var globalStore = GlobalStore()
+	
+	let modelContainer: ModelContainer = {
+		do {
+			let schema = Schema([
+				Project.self
+			])
+			let modelConfiguration = ModelConfiguration(
+				schema: schema, 
+				isStoredInMemoryOnly: false,
+				allowsSave: true,
+				cloudKitDatabase: .none
+			)
+			return try ModelContainer(for: schema, configurations: [modelConfiguration])
+		} catch {
+			fatalError("Could not create ModelContainer: \(error)")
+		}
+	}()
     
     var body: some Scene {
         WindowGroup(id: "project-picker") {
 			StartingView()
 				.environment(globalStore)
-				.onAppear {
-					// This will ensure the view model has access to model context
-					let modelContainer = try? ModelContainer(for: Project.self)
-				}
+				.containerBackground(
+					.thinMaterial, for: .window
+				)
         }
+		.modelContainer(modelContainer)
 		.windowStyle(.hiddenTitleBar)
 		.defaultPosition(.center)
-		.defaultSize(width: 500, height: 300)
+		.defaultSize(width: 900, height: 500)
+		.windowResizability(.contentSize)
 		
-		Window("Editor", id: "editor") {
+		WindowGroup("Editor", id: "editor") {
 			EditorView()
 				.environment(globalStore)
+				.inspector(isPresented: .init(
+					get: { globalStore.inspectorVisible },
+					set: { globalStore.inspectorVisible = $0 }
+				)) {
+					InspectorView()
+						.environment(globalStore)
+						.modelContainer(modelContainer)
+						.inspectorColumnWidth(min: 260, ideal: 320, max: 500)
+				}
 				.toolbar {
-					ToolbarItem {
+					ToolbarItem(placement: .automatic) {
 						Button {
-							print("Toggle Inspector Panel")
+							globalStore.inspectorVisible.toggle()
 						} label: {
-							Label("Inspector", systemImage: "sidebar.right")
+							Label("Toggle Inspector", systemImage: "sidebar.right")
 						}
 					}
 				}
-				.inspector(isPresented: $elementInspector) {
-					Text("Inspector panel")
-				}
-				.onAppear {
-					// This will ensure the view model has access to model context
-					let modelContainer = try? ModelContainer(for: Project.self)
-				}
 		}
+		.modelContainer(modelContainer)
+		.defaultSize(width: 1400, height: 900)
     }
 }

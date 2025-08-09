@@ -14,7 +14,7 @@ class Component {
 	var type: ComponentType
 	var properties: [ComponentProperty]
 	var children: [Component]
-	var referencedView: ViewFile?                // For embedded custom views
+	var referencedView: ViewFile?
 	var modifiers: [Modifier]
 
 	init(type: ComponentType) {
@@ -28,10 +28,12 @@ class Component {
 
 @Model
 class ComponentProperty {
-	var key: String           // e.g. "text", "alignment"
-	var value: String         // e.g. "\"Hello\"", ".center"
+	var id: UUID
+	var key: String
+	var value: String
 
 	init(key: String, value: String) {
+		self.id = UUID()
 		self.key = key
 		self.value = value
 	}
@@ -39,10 +41,12 @@ class ComponentProperty {
 
 @Model
 class Modifier {
-	var name: String                          // e.g. "padding"
+	var id: UUID
+	var name: String
 	var arguments: [ModifierArgument]
 
 	init(name: String) {
+		self.id = UUID()
 		self.name = name
 		self.arguments = []
 	}
@@ -50,16 +54,18 @@ class Modifier {
 
 @Model
 class ModifierArgument {
-	var name: String?                         // Optional named arg (e.g. "edge")
-	var value: String                         // e.g. ".leading", "8", ".title"
+	var id: UUID
+	var name: String?
+	var value: String
 
 	init(name: String? = nil, value: String) {
+		self.id = UUID()
 		self.name = name
 		self.value = value
 	}
 }
 
-public enum ComponentType: String, Codable {
+public enum ComponentType: String, Codable, CaseIterable {
 	case text
 	case image
 	case vstack
